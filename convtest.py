@@ -1,5 +1,11 @@
 import numpy
-from scipy.misc import logsumexp
+import numpy as np
+#from scipy.misc import logsumexp
+import pyconvolution
+
+def logsumexp(x):
+    xmax = x.max()
+    return xmax + numpy.log(numpy.sum(numpy.exp(x-xmax)))
 
 #y = y.squeeze().astype(int)
 
@@ -18,30 +24,26 @@ class CNNModel:
         nChannels, outputSize, filterSize = (64,46, 3)
         poolSize = 3
 
-        self.conv_r = numpy.zeros((nChannels, outputSize,outputSize), dtype=numpy.float)
-        for k in range(nChannels):
-            for i in range(outputSize):
-                for j in range(outputSize):
-                    self.conv_r[k,i,j] = sigma(numpy.sum(data_x.reshape(48,48)[i:i+filterSize,j:j+filterSize] * self.conv_w[:,k].reshape(filterSize,filterSize)) + self.conv_b[k,0])
+        self.conv_r = pyconvolution.conv2d(data_x, self.conv_w, self.conv_b)
 
-        self.poolr = numpy.zeros((64, 44,44), dtype=numpy.float)
-        for k in range(64):
-            for i in range(44):
-                for j in range(44):
-                    self.poolr[k,i,j] = numpy.max(self.conv_r[k,i:i+poolSize,j:j+poolSize])
+        self.poolr = pyconvolution.pool2d(self.conv_r, 3)
 
-        fc_input = self.poolr.reshape(-1)
+        self.fc_input = self.poolr.reshape(-1)
 
-        self.result = numpy.dot(self.fc_w.T, fc_input) + self.fc_b
+        self.result = numpy.dot(self.fc_w.T, self.fc_input) + self.fc_b
         self.probs_r = numpy.exp(self.result - logsumexp(self.result))
 
         return self.probs_r
 
-    def bProp(self, y):
+    def bProp(self, y_expanded):
         hx = self.probs_r
+        m = hx.shape[0]
 
-def CrossEntropyError(probs, y):
-    y_expanded = numpy.zeros(probs.shape)
-    y_expanded[:,y] = 1
-    return -numpy.sum(y_expanded * numpy.log(probs))
+        dLastLayer = hx - y_expanded
+        W_grad = (1./m) * numpy.dot(self.fc_input.reshape(-1,1), dLastLayer)
+        B_grad = (1./m) * np.sum(dLastLayer, axis=0)
+        return W_grad, B_grad
+
+def CrossEntropyError(probs, y_expanded):
+    return -numpy.sum(y_expanded * numpy.log(probs)) / probs.shape[0]
 

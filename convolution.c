@@ -13,8 +13,8 @@ void conv2d(float *data, int dataSize,
     int outputSize = dataSize + 1 - filterSize;
     float value;
 
+    #pragma omp parallel for default(shared) private(iFilter,iRow, iCol, iFilterRow, iFilterCol, value)
     for (iFilter = 0; iFilter < nFilters; iFilter++) {
-            #pragma omp parallel for default(shared) firstprivate(iFilter) private(iRow, iCol, iFilterRow, iFilterCol, value)
             for (iRow = 0; iRow <  outputSize; iRow++) {
             for (iCol = 0; iCol < outputSize; iCol++) {
                 //this is each of the outputs of the convolution. Each pixel in each output channel
@@ -30,3 +30,28 @@ void conv2d(float *data, int dataSize,
     }
 }
 
+void pool2d(float *data, int dataSize, int nChannels,
+            int poolSize, float *output) {
+    int iChannel, iRow, iCol, iPoolRow, iPoolCol;
+
+    int outputSize = dataSize + 1 - poolSize;
+    float maxValue, thisValue;
+
+    for (iChannel = 0; iChannel < nChannels; iChannel++) {
+        for (iRow = 0; iRow <  outputSize; iRow++) {
+            for (iCol = 0; iCol < outputSize; iCol++) {
+                maxValue = 0;
+                for (iPoolRow = 0; iPoolRow < poolSize; iPoolRow++) {
+                    for (iPoolCol = 0; iPoolCol < poolSize; iPoolCol++) {
+                        // data[iChannel][iRow + iPoolRow][iCol + iPoolCol]
+                        thisValue = data[iChannel * (dataSize * dataSize) + (iRow + iPoolRow) * dataSize + iCol + iPoolCol];
+                        if (thisValue > maxValue)
+                            maxValue = thisValue;
+                    }
+                }
+                output[iChannel * (outputSize * outputSize) + iRow * outputSize + iCol] = maxValue;
+            }
+        }
+    }
+}
+            

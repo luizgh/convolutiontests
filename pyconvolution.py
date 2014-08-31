@@ -10,6 +10,9 @@ lib.conv2d.argtypes = [N.ctypeslib.ndpointer(N.float32, flags='aligned'), N.ctyp
                             N.ctypeslib.ndpointer(N.float32, flags='aligned'),
                             N.ctypeslib.ndpointer(N.float32, flags='aligned')]
 
+lib.pool2d.argtypes = [N.ctypeslib.ndpointer(N.float32, flags='aligned'), N.ctypeslib.c_intp, N.ctypeslib.c_intp, N.ctypeslib.c_intp,
+                            N.ctypeslib.ndpointer(N.float32, flags='aligned')]
+
 def conv2d(data, filters, biases):
     dataSize = int(numpy.sqrt(data.shape[0]))
     filterSize = int(numpy.sqrt(filters.shape[0]))
@@ -21,5 +24,17 @@ def conv2d(data, filters, biases):
     resultSize = dataSize - filterSize + 1;
 
     result = numpy.zeros((nFilters, resultSize, resultSize), dtype = N.float32)
-    lib.conv2d(data, dataSize, filters, filterSize, nFilters, biases, result);
+    lib.conv2d(data, dataSize, filters, filterSize, nFilters, biases, result)
     return result
+
+
+def pool2d(data, poolSize):
+    nChannels = data.shape[0]
+    dataSize = data.shape[1]
+	
+    resultSize = dataSize - poolSize + 1;
+
+    result = numpy.zeros((nChannels, resultSize, resultSize), dtype = N.float32)
+    lib.pool2d(data, dataSize, nChannels, poolSize, result)
+    return result
+	
