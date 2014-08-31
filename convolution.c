@@ -55,3 +55,36 @@ void pool2d(float *data, int dataSize, int nChannels,
     }
 }
             
+void pool2d_backprop(float *convData, int dataSize,
+             float *dNextLayer, int nChannels, int poolSize,
+            float *convErrors) {
+    //Important: assumes convData contains only zeroes
+
+    int iChannel, iRow, iCol, iPoolRow, iPoolCol;
+
+    int outputSize = dataSize + 1 - poolSize; //Note: outputSize is the size of the pooling output. In BP, this is the "dNextLayer"
+    float maxValue, thisValue;
+    int maxIndexR, maxIndexC;
+
+    for (iChannel = 0; iChannel < nChannels; iChannel++) {
+        for (iRow = 0; iRow <  outputSize; iRow++) {
+            for (iCol = 0; iCol < outputSize; iCol++) {
+                maxValue = -1;
+                maxIndexR = maxIndexC = -1;
+                for (iPoolRow = 0; iPoolRow < poolSize; iPoolRow++) {
+                    for (iPoolCol = 0; iPoolCol < poolSize; iPoolCol++) {
+                        // data[iChannel][iRow + iPoolRow][iCol + iPoolCol]
+                        thisValue = convData[iChannel * (dataSize * dataSize) + (iRow + iPoolRow) * dataSize + iCol + iPoolCol];
+                        if (thisValue > maxValue) {
+                            maxValue = thisValue;
+                            maxIndexR = iRow + iPoolRow;
+                            maxIndexC = iCol + iPoolCol;
+                        }
+                    }
+                }
+                convErrors[iChannel * (dataSize * dataSize) + maxIndexR * dataSize + maxIndexC]  = dNextLayer[iChannel * (outputSize * outputSize) + iRow * outputSize + iCol];
+            }
+        }
+    }
+}
+            
